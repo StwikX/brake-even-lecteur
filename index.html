@@ -1,7 +1,7 @@
 <!doctype html>
 <!--
 	Brake Even — le lecteur YouTube du cinéma et des boombox (docs/v1.md, 7 quater, point 8).
-	À héberger tel quel (GitHub Pages, par exemple), puis donner son adresse à
+	Publiée le 2026-10-13 sur https://stwikx.github.io/brake-even-lecteur/ (dépôt StwikX/brake-even-lecteur) ; son adresse est dans
 	EconomyConfig.MediaYouTubePage. Le jeu charge : <adresse>?v=<identifiant>&t=<secondes>&vol=<0 à 100>.
 	Le lecteur officiel (IFrame API) n'est ni modifié ni masqué : c'est ce qu'exigent les règles
 	de YouTube, et sans page hôte le lecteur refuse de démarrer (erreur 153).
@@ -14,10 +14,13 @@
 	<style>
 		html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 		#lecteur { width: 100%; height: 100%; }
+		/* Transparent : rien du lecteur n'est caché ; il reçoit le clic que le jeu envoie, pour le son. */
+		#clic { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: transparent; }
 	</style>
 </head>
 <body>
 	<div id="lecteur"></div>
+	<div id="clic"></div>
 	<script>
 		var q = new URLSearchParams( location.search );
 		var id = ( q.get( "v" ) || "" ).replace( /[^A-Za-z0-9_-]/g, "" ).slice( 0, 11 );
@@ -27,13 +30,23 @@
 		var api = document.createElement( "script" );
 		api.src = "https://www.youtube.com/iframe_api";
 		document.head.appendChild( api );
+		var lecteur = null, clique = false;
+		// Un navigateur ne lance une vidéo d'office qu'en muet : on part muet, et le premier clic
+		// (envoyé par le jeu) rend le son, au volume du réglage du joueur.
+		function sonner() {
+			if ( !lecteur ) return;
+			if ( volume <= 0 ) lecteur.mute(); else { lecteur.unMute(); lecteur.setVolume( volume ); }
+			lecteur.playVideo();
+		}
+		document.getElementById( "clic" ).addEventListener( "mousedown", function () { clique = true; sonner(); } );
 		function onYouTubeIframeAPIReady() {
-			new YT.Player( "lecteur", {
+			lecteur = new YT.Player( "lecteur", {
 				videoId: id,
-				playerVars: { autoplay: 1, start: debut, playsinline: 1, rel: 0 },
+				playerVars: { autoplay: 1, mute: 1, start: debut, playsinline: 1, rel: 0 },
 				events: { onReady: function ( e ) {
-					if ( volume <= 0 ) e.target.mute(); else { e.target.unMute(); e.target.setVolume( volume ); }
+					e.target.mute();
 					e.target.playVideo();
+					if ( clique ) sonner();
 				} }
 			} );
 		}
