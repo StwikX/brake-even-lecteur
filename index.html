@@ -2,7 +2,9 @@
 <!--
 	Brake Even — le lecteur YouTube du cinéma et des boombox (docs/v1.md, 7 quater, point 8).
 	Publiée le 2026-10-13 sur https://stwikx.github.io/brake-even-lecteur/ (dépôt StwikX/brake-even-lecteur) ; son adresse est dans
-	EconomyConfig.MediaYouTubePage. Le jeu charge : <adresse>?v=<identifiant>&t=<secondes>&vol=<0 à 100>.
+	EconomyConfig.MediaYouTubePage. Le jeu charge : <adresse>?v=<identifiant>&t=<secondes>&vol=<0 à 100>,
+	puis change seulement la fin de l'adresse (#vol=<0 à 100>) quand le volume bouge : la distance du
+	joueur à l'écran et son réglage. La page ne se recharge pas, elle règle le lecteur.
 	Le lecteur officiel (IFrame API) n'est ni modifié ni masqué : c'est ce qu'exigent les règles
 	de YouTube, et sans page hôte le lecteur refuse de démarrer (erreur 153).
 -->
@@ -39,6 +41,15 @@
 			lecteur.playVideo();
 		}
 		document.getElementById( "clic" ).addEventListener( "mousedown", function () { clique = true; sonner(); } );
+		// Le volume que le jeu envoie par la fin de l'adresse, sans recharger la page.
+		function lireVolume() {
+			var m = /vol=(\d+)/.exec( location.hash );
+			if ( !m ) return;
+			volume = Math.min( 100, Math.max( 0, parseInt( m[1], 10 ) || 0 ) );
+			if ( !lecteur || !clique ) return;
+			if ( volume <= 0 ) lecteur.mute(); else { lecteur.unMute(); lecteur.setVolume( volume ); }
+		}
+		window.addEventListener( "hashchange", lireVolume );
 		function onYouTubeIframeAPIReady() {
 			lecteur = new YT.Player( "lecteur", {
 				videoId: id,
